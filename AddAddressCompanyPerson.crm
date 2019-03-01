@@ -1,0 +1,76 @@
+Void setCompanyAddress(Map mAddress, Integer companyId) 
+{ 
+  NSContactAgent ContactAgent; 
+  NSContactEntity ContactEntity; 
+  NSAddress CompanyAddress;   
+  ContactEntity = ContactAgent.GetContactEntity(companyId); 
+  CompanyAddress = ContactAgent.GetAddress(companyId); 
+
+  NSLocalizedField[][] CompanyAddressField = CompanyAddress.GetLocalizedAddress(); 
+  for(Integer i = 0; i < CompanyAddressField.length(); i++) 
+  { 
+    for (Integer j = 0; j < CompanyAddressField[i].length(); j++) 
+    { 
+        String addressType = CompanyAddressField[i][j].GetAddressType(); 
+        String addressName = CompanyAddressField[i][j].GetName();  
+
+        if (addressName == "StreetAddress1" && addressType == "ContactStreetAddress") 
+          CompanyAddressField[i][j].SetValue(mAddress.get("address2")); 
+        else if (addressName == "StreetZipcode" && addressType == "ContactStreetAddress") 
+          CompanyAddressField[i][j].SetValue(mAddress.get("zip")); 
+        else if (addressName == "StreetCity" && addressType == "ContactStreetAddress") 
+          CompanyAddressField[i][j].SetValue(mAddress.get("city")); 
+        else if (addressName == "PostalAddress1" && addressType == "ContactPostalAddress") 
+          CompanyAddressField[i][j].SetValue(mAddress.get("address1")); 
+        else if (addressName == "PostalZipcode" && addressType == "ContactPostalAddress") 
+          CompanyAddressField[i][j].SetValue(mAddress.get("zip")); 
+        else if (addressName == "PostalCity" && addressType == "ContactPostalAddress") 
+          CompanyAddressField[i][j].SetValue(mAddress.get("city")); 
+    } 
+  } 
+
+  CompanyAddress.SetLocalizedAddress(CompanyAddressField); 
+  ContactEntity.SetAddress(CompanyAddress); 
+  ContactAgent.SaveContactEntity(ContactEntity); 
+
+} 
+
+Void setCustomerAddress(Map mAddress, Integer customerId) 
+{ 
+  NSPersonAgent agent; 
+  NSPersonEntity entity; 
+  NSAddress address;   
+
+  entity = agent.GetPersonEntity(customerId); 
+  address = agent.GetAddress(customerId); 
+  NSLocalizedField[][] addressField = address.GetLocalizedAddress(); 
+  for(Integer i = 0; i < addressField.length(); i++) 
+  {
+    for (Integer j = 0; j < addressField[i].length(); j++) 
+    { 
+        String addressType = addressField[i][j].GetAddressType(); 
+        String addressName = addressField[i][j].GetName(); 
+        if (addressName == "Address1" && addressType == "PersonPrivateAddress") 
+          addressField[i][j].SetValue(mAddress.get("address1")); 
+        else if (addressName == "Zipcode" && addressType == "PersonPrivateAddress") 
+          addressField[i][j].SetValue(mAddress.get("zip")); 
+        else if (addressName == "City" && addressType == "PersonPrivateAddress") 
+          addressField[i][j].SetValue(mAddress.get("city")); 
+    } 
+  } 
+  address.SetLocalizedAddress(addressField); 
+  entity.SetAddress(address); 
+  agent.SavePersonEntity(entity);
+   
+} 
+
+Integer contactId = 1;   
+
+Map address; 
+address.insert("address1", "Postboks 0000"); 
+address.insert("address2", "Wergelandsveien 27"); 
+address.insert("address3", ""); 
+address.insert("zip", "0167"); 
+address.insert("city", "Oslo");   
+
+setCompanyAddress(address, contactId); 

@@ -1,0 +1,132 @@
+#setLanguageLevel 3;   
+
+//Metode for å printe resultater for sjekking   
+Void printDetails(String field, String criteriaField, String criteria, String label)   
+{   
+    String[] fields = field.split(";");   
+    SearchEngine se;   
+    for(Integer i = 0; i < fields.length();i++)   
+    se.addField(fields[i]);   
+    se.addCriteria(criteriaField, "equals", criteria);   
+    se.bypassNetServer(true);   
+    for(se.select();!se.eof();se.next())   
+    {   
+        print(label + " ");   
+        for (Integer col = 0; col < se.countColumns(); col++)   
+        print(se.getField(col) + " ");   
+        print("\n");   
+    }   
+}   
+
+//Variabel for lagring av antall dager 
+Integer threshold = 90;   
+DateTime below;   
+below.addDay(threshold * -1);  
+below = below.moveToDayStart(); 
+
+//Variable for å kun printe resultater med en limit 
+Bool debug = false;   
+
+//Kode for å finne saker som er avsluttet og registrert for mer enn 90 dager siden   
+SearchEngine se;   
+se.addField("ticket.id");   
+se.addField("ticket.title");   
+se.addField("ticket.created_at");   
+se.addField("ticket.closed_at");   
+se.addCriteria("ticket.status", "equals", "2");   
+se.addCriteria("ticket.created_at", "Lte", below.toString());   
+if(debug)   
+    se.setLimit(100);   
+se.bypassNetServer(true);   
+se.addOrder("ticket.created_at", true);   
+for(se.select();!se.eof();se.next())   
+{    
+    if(debug)   
+    {   
+        //Rydd opp i ej_message, ticket_attachment, message_header, message_customers   
+        printDetails("ticket_attachment.attachment_id", "ticket_attachment.message_id.ticket_id", se.getField("ticket.id"), "Attachment to delete :");   
+        printDetails("message_header.name;message_header.value", "message_header.message_id.ticket_id", se.getField("ticket.id"), "Message header ");   
+        printDetails("message_customers.email", "message_customers.message_id.ticket_id", se.getField("ticket.id"), "Message customer ");   
+        printDetails("ej_message.id;ej_message.created_at", "ej_message.ticket_id", se.getField("ticket.id"), "Message ");   
+
+        //Rydd opp i ticket_customers   
+        printDetails("ticket_customers.customer_id", "ticket_customers.ticket_id", se.getField("ticket.id"), "Ticket Customer ");   
+
+        //Rydd opp i ticket_log_change, ticket_log_action, ticket_log   
+        printDetails("ticket_log.log_when;ticket_log.log_description", "ticket_log.ticket_id", se.getField("ticket.id"), "Ticket log ");   
+        printDetails("ticket_log_action.log_when;ticket_log_action.log_action", "ticket_log_action.ticket_id", se.getField("ticket.id"), "Ticket log action ");   
+        printDetails("ticket_log_change.log_change;ticket_log_change.from_value;ticket_log_change.to_value", "ticket_log_change.action_id.ticket_id", se.getField("ticket.id"), "Ticket log change ");   
+
+        //Rydd opp i ticket   
+        printDetails("ticket.id;ticket.created_at", "ticket.id", se.getField("ticket.id"), "Ticket ");   
+    }   
+    else   
+    {   
+
+    //Rydd opp i ej_message, ticket_attachment, message_header, message_customers   
+    SearchEngine ta;   
+    ta.addField("ticket_attachment.attachment_id");   
+    ta.addCriteria("ticket_attachment.message_id.ticket_id", "equals", se.getField("ticket.id"));   
+    ta.bypassNetServer(true);   
+    for(ta.select();!ta.eof();ta.next())   
+    {   
+        Attachment att;   
+        if(att.load(ta.getField(0).toInteger()))   
+            att.remove();   
+    }   
+
+    SearchEngine em;   
+    em.addField("ej_message.id");   
+    em.addCriteria("ej_message.ticket_id", "equals", se.getField("ticket.id"));   
+    String messageIds;   
+    em.bypassNetServer(true);   
+    for(em.select();!em.eof();em.next())   
+        messageIds.append(em.getField(0) + ",");   
+
+    messageIds = messageIds.stripTrailing(",");   
+
+    SearchEngine mh;   
+    mh.addCriteria("message_header.message_id", "in", messageIds);   
+    mh.bypassNetServer(true);   
+    mh.delete();   
+
+    SearchEngine mc;   
+    mc.addCriteria("message_customers.message_id", "in", messageIds);   
+    mc.bypassNetServer(true);   
+    mc.delete();   
+
+    em.delete();   
+
+    //Rydd opp i ticket_customers   
+    SearchEngine tc;   
+    tc.addCriteria("ticket_customers.ticket_id", "equals", se.getField("ticket.id"));   
+    tc.bypassNetServer(true);   
+    tc.delete();     
+
+    //Rydd opp i ticket_log_change, ticket_log_action, ticket_log   
+    SearchEngine tl;   
+    tl.addCriteria("ticket_log.ticket_id", "equals", se.getField("ticket.id"));   
+    tl.bypassNetServer(true);   
+    tl.delete();   
+
+    SearchEngine tla;   
+    tla.addField("ticket_log_action.id");   
+    tla.addCriteria("ticket_log_action.ticket_id", "equals", se.getField("ticket.id"));   
+    tla.bypassNetServer(true);   
+    for(tla.select();!tla.eof();tla.next())   
+    {   
+        SearchEngine tlc;   
+        tlc.addCriteria("ticket_log_change.action_id", "equals", tla.getField("ticket_log_action.id"));   
+        tlc.bypassNetServer(true);   
+        tlc.delete();   
+    }   
+    tla.delete();   
+
+    //Rydd opp i ticket   
+    SearchEngine t;   
+    t.addCriteria("ticket.id", "equals", se.getField("ticket.id"));   
+    t.bypassNetServer(true);   
+    t.delete();   
+
+    }   
+} 

@@ -1,0 +1,23 @@
+#setLanguageLevel 3; 
+
+SearchEngine se; 
+se.addField("associate.ejuserId"); 
+se.addField("associate.ejuserId.username"); 
+se.addField("associate.name"); 
+se.addField("associate.person_id.firstname"); 
+se.addField("associate.person_id.lastname"); 
+se.addCriteria("associate.ejuserId", "gt", "1"); 
+se.bypassNetServer(true); 
+for(se.select();!se.eof();se.next()) 
+{ 
+  print(se.getField(0) + " " + se.getField(1) + " (" + se.getField(3) + " " + se.getField(4) + ")\n"); 
+  if(se.getField(1) != (se.getField("associate.person_id.firstname") + " " + se.getField("associate.person_id.lastname"))) 
+  { 
+    SearchEngine upd; 
+    upd.addData("ejuser.username", se.getField("associate.person_id.firstname") + " " + se.getField("associate.person_id.lastname")); 
+    upd.addCriteria("ejuser.id", "equals", se.getField(0)); 
+    upd.update(); 
+  } 
+} 
+
+ 
